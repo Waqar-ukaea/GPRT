@@ -55,7 +55,6 @@ endif()
 # Configuration Options
 # ------------------------------------------------------------------
 option(GPRT_BUILD_SHARED "Build GPRT as a shared library? (otherwise static)" OFF)
-set(BUILD_SHARED_LIBS ${GPRT_BUILD_SHARED}) # use 'GPRT_' naming convention
 option(GPRT_USE_INCLUDED_GLFW "Build GPRT including the submoduled GLFW? (otherwise, system GLFW will be found)" ON)  
 
 # ------------------------------------------------------------------
@@ -65,6 +64,9 @@ option(GPRT_USE_INCLUDED_GLFW "Build GPRT including the submoduled GLFW? (otherw
 # provide these varaibles at both a local and parent scope
 if (GPRT_IS_SUBPROJECT)
   set(GPRT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gprt PARENT_SCOPE)
+  set(BUILD_SHARED_LIBS ${GPRT_BUILD_SHARED} PARENT_SCOPE)
+else()
+  set(BUILD_SHARED_LIBS ${GPRT_BUILD_SHARED})
 endif()
 set(GPRT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gprt)
 
