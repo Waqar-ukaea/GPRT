@@ -50,8 +50,8 @@ template <typename T> struct Mesh {
     indexBuffer = gprtDeviceBufferCreate<uint3>(context, indices.size(), indices.data());
     geometry = gprtGeomCreate(context, geomType);
 
-    gprtTrianglesSetVertices(geometry, vertexBuffer, vertices.size());
-    gprtTrianglesSetIndices(geometry, indexBuffer, indices.size());
+    gprtTrianglesSetVertices(geometry, vertexBuffer, uint32_t(vertices.size()));
+    gprtTrianglesSetIndices(geometry, indexBuffer, uint32_t(indices.size()));
     TrianglesGeomData *geomData = gprtGeomGetParameters(geometry);
     geomData->vertex = gprtBufferGetDevicePointer(vertexBuffer);
     geomData->index = gprtBufferGetDevicePointer(indexBuffer);
@@ -211,8 +211,8 @@ int main(int ac, char **av) {
 #endif
 
       // step 1 : Calculate the amount of rotation given the mouse movement.
-      float deltaAngleX = (2 * M_PI / fbSize.x);
-      float deltaAngleY = (M_PI / fbSize.y);
+      float deltaAngleX = float(2 * M_PI / fbSize.x);
+      float deltaAngleY = float(M_PI / fbSize.y);
       float xAngle = float(lastxpos - xpos) * deltaAngleX;
       float yAngle = float(lastypos - ypos) * deltaAngleY;
 

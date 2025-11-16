@@ -37,16 +37,16 @@ int main(int ac, char **av) {
   
   // Each solid vertex has a position (xyz) and density (w)
   GPRTBufferOf<float4> solidVertices = gprtDeviceBufferCreate<float4>(context, vertices.size(), vertices.data());
-  gprtSolidsSetVertices(solidGeom, solidVertices, vertices.size());
+  gprtSolidsSetVertices(solidGeom, solidVertices, uint32_t(vertices.size()));
 
   // Each solid primitive will read up to eight consecutive indices, depending on the type.
   GPRTBufferOf<uint4> solidIndices = gprtDeviceBufferCreate<uint4>(context, indices.size(), indices.data());
-  gprtSolidsSetIndices(solidGeom, solidIndices, indices.size()/2, /*indices stride*/ 2 * sizeof(uint4));
+  gprtSolidsSetIndices(solidGeom, solidIndices, uint32_t(indices.size())/2, /*indices stride*/ 2 * sizeof(uint4));
 
   // Solids can vary in their types. If all elements are known to be the same type, one can create a type 
   // array of one element, then set the type stride to 0 when creating the solid geometry. 
   GPRTBufferOf<uint8_t> solidTypes = gprtDeviceBufferCreate<uint8_t>(context, types.size(), types.data());
-  gprtSolidsSetTypes(solidGeom, solidTypes, types.size(), /*types stride. Set to 0 if we only have one type*/ 1);
+  gprtSolidsSetTypes(solidGeom, solidTypes, uint32_t(types.size()), /*types stride. Set to 0 if we only have one type*/ 1);
 
   GPRTBuildParams buildParams;
   buildParams.buildMode = GPRT_BUILD_MODE_FAST_BUILD_NO_UPDATE;

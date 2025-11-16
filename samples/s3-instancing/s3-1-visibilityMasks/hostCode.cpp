@@ -192,9 +192,9 @@ int main(int ac, char **av) {
   BLAS[14].mask = 0b11111110;
 
   GPRTBufferOf<gprt::Instance> instancesBuffer =
-      gprtDeviceBufferCreate<gprt::Instance>(context, BLAS.size(), BLAS.data());
+      gprtDeviceBufferCreate<gprt::Instance>(context, uint32_t(BLAS.size()), BLAS.data());
 
-  GPRTAccel world = gprtInstanceAccelCreate(context, BLAS.size(), instancesBuffer);
+  GPRTAccel world = gprtInstanceAccelCreate(context, uint32_t(BLAS.size()), instancesBuffer);
 
   // Now that our instance acceleration structure is setup, build it.
   gprtAccelBuild(context, world);
@@ -238,8 +238,8 @@ int main(int ac, char **av) {
 #endif
 
       // step 1 : Calculate the amount of rotation given the mouse movement.
-      float deltaAngleX = (2 * M_PI / fbSize.x);
-      float deltaAngleY = (M_PI / fbSize.y);
+      float deltaAngleX = float(2 * M_PI / fbSize.x);
+      float deltaAngleY = float(M_PI / fbSize.y);
       float xAngle = float(lastxpos - xpos) * deltaAngleX;
       float yAngle = float(lastypos - ypos) * deltaAngleY;
 

@@ -98,7 +98,7 @@ uint2 GetSTBNCoordinate(int m, int n, int frameID, int2 pixelID) {
 void generateSolids(std::vector<float4> &vertices, std::vector<uint4> &indices, std::vector<uint8_t> &types) {
   // A helper function which translates and scales a solid prim, then appends it's vertices and indices to a global array.
   auto addSolid = [&](float4 disp, float scale, std::vector<float4> verts, std::vector<uint4> inds, uint8_t type) {
-    uint32_t currentOff = vertices.size();
+    uint32_t currentOff = uint32_t(vertices.size());
     for (auto &ind : inds) ind += uint4(currentOff);
     for (auto &vert : verts) vert = disp + scale * vert;
     vertices.insert(vertices.end(), verts.begin(), verts.end());

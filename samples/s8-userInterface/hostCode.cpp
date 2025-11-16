@@ -185,8 +185,8 @@ int main(int ac, char **av) {
 #endif
 
       // step 1 : Calculate the amount of rotation given the mouse movement.
-      float deltaAngleX = (2 * M_PI / fbSize.x);
-      float deltaAngleY = (M_PI / fbSize.y);
+      float deltaAngleX = float(2 * M_PI / fbSize.x);
+      float deltaAngleY = float(M_PI / fbSize.y);
       float xAngle = float(lastxpos - xpos) * deltaAngleX;
       float yAngle = float(lastypos - ypos) * deltaAngleY;
 

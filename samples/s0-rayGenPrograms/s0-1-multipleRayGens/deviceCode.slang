@@ -32,7 +32,7 @@ void secondRayGen(uniform RayGenData record) {
   float2 u = float2(threadID) / float2(dims);
   u.y = 1.0 - u.y;
   float r = u.x * 7.0;
-  float4 z, v = float4(0.075) + z, c = float4(0.0, 0.22, 0.35, 0.5);
+  float4 z = float4(0.f), v = float4(0.075) + z, c = float4(0.0, 0.22, 0.35, 0.5);
   float3 C = ceil(r / float3(2.0, 4.0, 1.0)) - floor(ceil(r / float3(2.0, 4.0, 1.0)) / 2.0) * 2.0;
   if (u.y > 0.33) {
     C *= 0.75;

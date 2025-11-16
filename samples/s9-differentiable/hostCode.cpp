@@ -100,8 +100,8 @@ template <typename T> struct Mesh {
     indexBuffer = gprtDeviceBufferCreate<uint3>(context, indices.size(), indices.data());
     geometry = gprtGeomCreate(context, geomType);
 
-    gprtTrianglesSetVertices(geometry, vertexBuffer, vertices.size());
-    gprtTrianglesSetIndices(geometry, indexBuffer, indices.size());
+    gprtTrianglesSetVertices(geometry, vertexBuffer, uint32_t(vertices.size()));
+    gprtTrianglesSetIndices(geometry, indexBuffer, uint32_t(indices.size()));
     TrianglesGeomData *geomData = gprtGeomGetParameters(geometry);
     geomData->vertex = gprtBufferGetDevicePointer(vertexBuffer);
     geomData->index = gprtBufferGetDevicePointer(indexBuffer);
@@ -142,7 +142,7 @@ reset() {
 #include <iostream>
 int
 main(int ac, char **av) {
-  srand(time(0));
+  srand(uint32_t(time(0)));
 
   LOG("gprt example '" << av[0] << "' starting up");
 
@@ -281,8 +281,8 @@ main(int ac, char **av) {
   obbPC.vertices = gprtBufferGetDevicePointer(mesh.vertexBuffer);
   obbPC.indices = gprtBufferGetDevicePointer(mesh.indexBuffer);
   obbPC.instance = gprtBufferGetDevicePointer(aabbInstanceBuffer);
-  obbPC.numIndices = mesh.indices.size();
-  obbPC.numTrisToInclude = mesh.indices.size();
+  obbPC.numIndices = uint32_t(mesh.indices.size());
+  obbPC.numTrisToInclude = uint32_t(mesh.indices.size());
 
   gprtBuildShaderBindingTable(context, GPRT_SBT_ALL);
   gprtComputeLaunch(ClearOBB, {1, 1, 1}, {1, 1, 1}, obbPC);
@@ -333,8 +333,8 @@ main(int ac, char **av) {
 #endif
 
       // step 1 : Calculate the amount of rotation given the mouse movement.
-      float deltaAngleX = (2 * M_PI / fbSize.x);
-      float deltaAngleY = (M_PI / fbSize.y);
+      float deltaAngleX = float(2 * M_PI / fbSize.x);
+      float deltaAngleY = float(M_PI / fbSize.y);
       float xAngle = float(lastxpos - xpos) * deltaAngleX;
       float yAngle = float(lastypos - ypos) * deltaAngleY;
 
@@ -418,7 +418,7 @@ main(int ac, char **av) {
     ImGui::Text("Surface Area %f", eulPtr[2].x);
     surfaceAreas.push_back(eulPtr[2].x);
 
-    ImGui::PlotLines("Surface Area", surfaceAreas.data(), surfaceAreas.size(), 0, 0, 3.4028235E38F, 3.4028235E38F,
+    ImGui::PlotLines("Surface Area", surfaceAreas.data(), uint32_t(surfaceAreas.size()), 0, 0, 3.4028235E38F, 3.4028235E38F,
                      {200.f, 100.f}, 4);
 
     // ImGui::Text("Derivative surface Area %f", eulPtr[2].y);
@@ -428,12 +428,12 @@ main(int ac, char **av) {
     if (ImGui::Checkbox("Use Vector Adam Optimizer", &useVectorAdam))
       reset();
 
-    if (ImGui::SliderInt("Tris to include", &obbPC.numTrisToInclude, 1, mesh.indices.size()))
+    if (ImGui::SliderInt("Tris to include", &obbPC.numTrisToInclude, 1, uint32_t(mesh.indices.size())))
       reset();
 
-    ImGui::SliderFloat("Learning rate 1e10^-n", &learningRate, .1, 2);
-    ImGui::SliderFloat("Adam Beta 1 1e10^-n", &adamBeta1, .9, .999);
-    ImGui::SliderFloat("Adam Beta 2 1e10^-n", &adamBeta2, .9, .999);
+    ImGui::SliderFloat("Learning rate 1e10^-n", &learningRate, .1f, 2);
+    ImGui::SliderFloat("Adam Beta 1 1e10^-n", &adamBeta1, .9f, .999f);
+    ImGui::SliderFloat("Adam Beta 2 1e10^-n", &adamBeta2, .9f, .999f);
 
     if (ImGui::Button("Reset")) {
       reset();

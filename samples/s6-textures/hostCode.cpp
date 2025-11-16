@@ -165,7 +165,7 @@ int main(int ac, char **av) {
 
   GPRTBufferOf<gprt::Instance> instancesBuffer =
       gprtDeviceBufferCreate<gprt::Instance>(context, instances.size(), instances.data());
-  GPRTAccel trianglesTLAS = gprtInstanceAccelCreate(context, instances.size(), instancesBuffer);
+  GPRTAccel trianglesTLAS = gprtInstanceAccelCreate(context, uint32_t(instances.size()), instancesBuffer);
 
   pc.instances = gprtBufferGetDevicePointer(instancesBuffer);
   pc.numInstances = (uint32_t) instances.size();
@@ -221,10 +221,10 @@ int main(int ac, char **av) {
 #endif
 
       // step 1 : Calculate the amount of rotation given the mouse movement.
-      float deltaAngleX = (2 * M_PI / fbSize.x);
-      float deltaAngleY = (M_PI / fbSize.y);
-      float xAngle = (lastxpos - xpos) * deltaAngleX;
-      float yAngle = (lastypos - ypos) * deltaAngleY;
+      float deltaAngleX = float(2 * M_PI / fbSize.x);
+      float deltaAngleY = float(M_PI / fbSize.y);
+      float xAngle = float(lastxpos - xpos) * deltaAngleX;
+      float yAngle = float(lastypos - ypos) * deltaAngleY;
 
       // step 2: Rotate the camera around the pivot point on the first axis.
       float4x4 rotationMatrixX = math::matrixFromRotation(xAngle, lookUp);
