@@ -512,6 +512,8 @@ struct Context {
   VkPhysicalDeviceFeatures2 deviceFeatures2;
   VkPhysicalDeviceVulkan11Features deviceVulkan11Features;
   VkPhysicalDeviceVulkan12Features deviceVulkan12Features;
+  VkPhysicalDeviceVulkan13Features deviceVulkan13Features;
+  VkPhysicalDeviceVulkan14Features deviceVulkan14Features;
   VkPhysicalDeviceShaderAtomicFloatFeaturesEXT atomicFloatFeatures;
   VkPhysicalDeviceRayTracingValidationFeaturesNV rayTracingValidationFeatures;
   VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV invocationReorderFeatures;
@@ -1338,12 +1340,18 @@ struct Texture : public ImageResource {
       imageMemoryBarrier.srcAccessMask = 0;
       break;
 
-    case VK_IMAGE_LAYOUT_PREINITIALIZED:
-      // Image is preinitialized
-      // Only valid as initial layout for linear images, preserves memory
-      // contents Make sure host writes have been finished
+    case VK_IMAGE_LAYOUT_PREINITIALIZED:    
+      // Contents were written by the host before queue submission.
       imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+      // Make sure the stage mask we pass includes the host stage.
+      if ((srcStageMask & VK_PIPELINE_STAGE_HOST_BIT) == 0) {
+        srcStageMask |= VK_PIPELINE_STAGE_HOST_BIT;
+      }
       break;
+      // // Image is preinitialized
+      // // Only valid as initial layout for linear images, preserves memory
+      // // contents Make sure host writes have been finished
+      // imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
 
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
       // Image is a color attachment
@@ -1408,11 +1416,16 @@ struct Texture : public ImageResource {
       break;
 
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-      // Image will be read in a shader (sampler, input attachment)
-      // Make sure any writes to the image have been finished
-      if (imageMemoryBarrier.srcAccessMask == 0) {
-        imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
-      }
+      // Image will be read in a shader (sampler, input attachment).
+      // If we're coming from TRANSFER_DST_OPTIMAL, srcAccessMask was
+      // already set to VK_ACCESS_TRANSFER_WRITE_BIT above.
+      // If we're coming from UNDEFINED, there are no prior writes,
+      // so leaving srcAccessMask == 0 is correct.      
+      // // Image will be read in a shader (sampler, input attachment)
+      // // Make sure any writes to the image have been finished
+      // if (imageMemoryBarrier.srcAccessMask == 0) {
+      //   imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+      // }
       imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
       break;
     default:
@@ -5217,6 +5230,9 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     enabledDeviceExtensions.push_back(VK_NV_RAY_TRACING_VALIDATION_EXTENSION_NAME);
   }
 
+  // Required for storagePushConstant8
+  enabledDeviceExtensions.push_back(VK_KHR_8BIT_STORAGE_EXTENSION_NAME);
+
   // For timeline semaphores
   enabledDeviceExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 
@@ -5413,7 +5429,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
   //     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT_CONTROLS_PROPERTIES_KHR};
   // floatControlsProperties.denormBehaviorIndependence = VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_ALL;
   // floatControlsProperties.pNext = pNext;
-  // pNext = &floatControlsProperties;
+  // pNext = &floatControlsProperties;   
 
   shaderClockFeatures = {};
   shaderClockFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
@@ -5491,6 +5507,16 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     rtQueryFeatures.pNext = pNext;
     pNext = &rtQueryFeatures;
   }
+
+  deviceVulkan14Features = {};
+  deviceVulkan14Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+  deviceVulkan14Features.pNext = pNext;
+  pNext = &deviceVulkan14Features;
+
+  deviceVulkan13Features = {};
+  deviceVulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+  deviceVulkan13Features.pNext = pNext;
+  pNext = &deviceVulkan13Features;
 
   deviceVulkan12Features = {};
   deviceVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -8048,13 +8074,12 @@ gprtGeomTypeSetIntersectionProg(GPRTGeomType _geomType, int rayType, GPRTModule 
 }
 
 GPRT_API GPRTSampler
-gprtSamplerCreate(GPRTContext _context, GPRTFilter magFilter, GPRTFilter minFilter, GPRTFilter mipFilter,
-                  uint32_t anisotropy, GPRTSamplerAddressMode addressMode, GPRTBorderColor borderColor) {
+gprtSamplerCreate(GPRTContext _context, GPRTSamplerParams params) {
   LOG_API_CALL();
 
   Context *context = (Context *) _context;
-  Sampler *sampler = new Sampler(context, (VkFilter) magFilter, (VkFilter) minFilter, (VkSamplerMipmapMode) mipFilter,
-                                 anisotropy, (VkSamplerAddressMode) addressMode, (VkBorderColor) borderColor);
+  Sampler *sampler = new Sampler(context, (VkFilter) params.magFilter, (VkFilter) params.minFilter, (VkSamplerMipmapMode) params.mipFilter,
+                                 params.anisotropy, (VkSamplerAddressMode) params.addressMode, (VkBorderColor) params.borderColor);
 
   return (GPRTSampler) sampler;
 }

@@ -69,4 +69,5 @@ struct CompositeGuiConstants {
   float4 *imageBuffer;
   uint *frameBuffer;
   DescriptorHandle<Texture2D<float4>> guiTexture;
+  DescriptorHandle<SamplerState> sampler;
 };

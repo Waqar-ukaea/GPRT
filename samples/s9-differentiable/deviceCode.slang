@@ -28,9 +28,8 @@ CompositeGui(uint3 DispatchThreadID: SV_DispatchThreadID, uniform CompositeGuiCo
   float4 imageColor = pc.imageBuffer[fbOfs];
 
   // Sample the color from the GUI texture
-  SamplerState sampler = gprt::getDefaultSampler();
   DescriptorHandle<Texture2D<float4>> guiTexture = pc.guiTexture;
-  float4 guiColor = guiTexture.SampleGrad(sampler, uv, float2(0.f, 0.f), float2(0.f, 0.f));
+  float4 guiColor = guiTexture.SampleGrad(pc.sampler, uv, float2(0.f, 0.f), float2(0.f, 0.f));
 
   // Gamma correction
   guiColor = pow(guiColor, 2.2f);
@@ -61,7 +60,7 @@ raygen(uniform RayGenData record) {
   if (payload.tHit > 0.f)
     rayDesc.TMax = payload.tHit;
 
-  TraceRay(record.obbAccel, RAY_FLAG_FORCE_OPAQUE, 0xff, 0, /*miss type*/ 1, rayDesc, payload);
+  TraceRay(record.obbAccel, RAY_FLAG_NONE, 0xff, 0, /*miss type*/ 1, rayDesc, payload);
 
   const int fbOfs = pixelID.x + fbSize.x * pixelID.y;
   record.imageBuffer[fbOfs] = float4(payload.color, 1.f);
@@ -331,7 +330,7 @@ struct BBoxAttributes {
 [shader("intersection")]
 void
 intersectBoundingBox(uniform BoundingBoxData record) {
-
+  uint primID = PrimitiveIndex();
   float3 ro = ObjectRayOrigin();
   float3 rd = ObjectRayDirection();
   float tcur = RayTCurrent();
@@ -339,8 +338,8 @@ intersectBoundingBox(uniform BoundingBoxData record) {
   BBoxAttributes attr;
 
   // raytrace bounding box
-  float3 bbmin = record.aabbs[0];
-  float3 bbmax = record.aabbs[1];
+  float3 bbmin = record.aabbs[primID*2+0];
+  float3 bbmax = record.aabbs[primID*2+1];
 
   attr.cen = 0.5 * (bbmin + bbmax);
   attr.rad = 0.5 * (bbmax - bbmin);

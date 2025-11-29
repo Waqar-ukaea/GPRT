@@ -27,9 +27,8 @@ CompositeGui(uint3 DispatchThreadID: SV_DispatchThreadID, uniform CompositeGuiCo
   float4 imageColor = pc.imageBuffer[fbOfs];
 
   // Sample the color from the GUI texture
-  SamplerState sampler = gprt::getDefaultSampler();
   DescriptorHandle<Texture2D> guiTexture = pc.guiTexture;
-  float4 guiColor = guiTexture.SampleGrad(sampler, uv, float2(0.f, 0.f), float2(0.f, 0.f));
+  float4 guiColor = guiTexture.SampleGrad(pc.sampler, uv, float2(0.f, 0.f), float2(0.f, 0.f));
 
   // Gamma correction
   guiColor.rgb = gprt::srgb_to_linear(guiColor.rgb);

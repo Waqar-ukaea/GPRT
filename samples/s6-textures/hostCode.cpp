@@ -106,36 +106,41 @@ int main(int ac, char **av) {
  
   GPRTTextureOf<stbi_uc> texture = gprtDeviceTextureCreate<stbi_uc>(context, texParams, pixels);
 
-  std::vector<GPRTSampler> samplers = {
-      // First texture will use the default sampler
-      gprtSamplerCreate(context),
-      // Next texture we'll show off mipmapping, so we'll use the
-      // default sampler here too
-      gprtSamplerCreate(context),
+  std::vector<GPRTSamplerParams> samplerParams = {
+    // First texture will use the default sampler
+    {},
+    // Next texture we'll show off mipmapping, so we'll use the
+    // default sampler here too
+    {},
 
-      // Then here, we'll demonstrate linear vs nearest for the magfilter
-      gprtSamplerCreate(context, GPRT_FILTER_NEAREST), gprtSamplerCreate(context, GPRT_FILTER_LINEAR),
+    // Then here, we'll demonstrate linear vs nearest for the magfilter      
+    {GPRT_FILTER_NEAREST},
+    {GPRT_FILTER_LINEAR},
 
-      // Here, we'll demonstrate linear vs nearest for the minFilter
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_NEAREST),
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR),
+    // Here, we'll demonstrate linear vs nearest for the minFilter
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_NEAREST},
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR},
+    
+    // Anisotropy of 1 vs 16. Should see less blurring with higher
+    // anisotropy values
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1},
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 16},
+    
+    // Changing wrap mode
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1, GPRT_SAMPLER_ADDRESS_MODE_REPEAT},
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1, GPRT_SAMPLER_ADDRESS_MODE_CLAMP},
+    
+    // Changing border mode
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1,
+                        GPRT_SAMPLER_ADDRESS_MODE_BORDER, GPRT_BORDER_COLOR_OPAQUE_BLACK},
+    {GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1,
+                        GPRT_SAMPLER_ADDRESS_MODE_BORDER, GPRT_BORDER_COLOR_OPAQUE_WHITE},
+  };  
 
-      // Anisotropy of 1 vs 16. Should see less blurring with higher
-      // anisotropy values
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1),
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 16),
-
-      // Changing wrap mode
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1,
-                        GPRT_SAMPLER_ADDRESS_MODE_REPEAT),
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1,
-                        GPRT_SAMPLER_ADDRESS_MODE_CLAMP),
-
-      // Changing border mode
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1,
-                        GPRT_SAMPLER_ADDRESS_MODE_BORDER, GPRT_BORDER_COLOR_OPAQUE_BLACK),
-      gprtSamplerCreate(context, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, GPRT_FILTER_LINEAR, 1,
-                        GPRT_SAMPLER_ADDRESS_MODE_BORDER, GPRT_BORDER_COLOR_OPAQUE_WHITE)};
+  std::vector<GPRTSampler> samplers;
+  for (auto &params : samplerParams) {
+    samplers.push_back(gprtSamplerCreate(context, params));    
+  }
 
   // ------------------------------------------------------------------
   // Meshes

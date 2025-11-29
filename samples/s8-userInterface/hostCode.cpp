@@ -86,6 +86,9 @@ int main(int ac, char **av) {
 
   auto imageBuffer = gprtDeviceBufferCreate<float4>(context, fbSize.x * fbSize.y);
 
+  GPRTSamplerParams sampParams;
+  auto sampler = gprtSamplerCreate(context, sampParams);
+
   GPRTTextureParams f32TexParams;
   f32TexParams.type = GPRT_IMAGE_TYPE_2D;
   f32TexParams.format = GPRT_FORMAT_R32G32B32A32_SFLOAT;
@@ -154,6 +157,7 @@ int main(int ac, char **av) {
   guiPC.frameBuffer = gprtBufferGetDevicePointer(frameBuffer);
   guiPC.imageBuffer = gprtBufferGetDevicePointer(imageBuffer);
   guiPC.guiTexture = gprtTextureGet2DHandle<float4>(guiColorAttachment);
+  guiPC.sampler = gprtSamplerGetHandle(sampler);
 
   RTPushConstants rtPC;
 
@@ -217,25 +221,32 @@ int main(int ac, char **av) {
 
     // Call the GPU raygen kernel function
     gprtRayGenLaunch2D(context, rayGen, fbSize.x, fbSize.y, rtPC);
+    gprtDeviceSynchronize(context);
 
     // Set our ImGui state
     bool show_demo_window = true;
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);
     ImGui::EndFrame();
+    gprtDeviceSynchronize(context);
 
     // Rasterize our gui
     gprtTextureClear(guiDepthAttachment);
     gprtTextureClear(guiColorAttachment);
     gprtGuiRasterize(context);
-
+    
     // Finally, composite the gui onto the screen using a compute shader.
+    gprtDeviceSynchronize(context);
     gprtBufferTextureCopy(context, imageBuffer, imageTexture, 0, 0, 0, 0, 0, 0, fbSize.x, fbSize.y, 1);
-
-    gprtComputeLaunch(CompositeGui, {fbSize.x, fbSize.y, 1}, {1, 1, 1}, guiPC);
+    gprtDeviceSynchronize(context);
+    
+    gprtComputeLaunch(CompositeGui, {fbSize.x, fbSize.y, 1}, {1, 1, 1}, guiPC);    
 
     // If a window exists, presents the framebuffer here to that window
     gprtBufferPresent(context, frameBuffer);
+    // gprtTexturePresent(context, guiColorAttachment);
+
+    // gprtDeviceSynchronize(context);
   }
   // returns true if "X" pressed or if in "headless" mode
   while (!gprtWindowShouldClose(context));

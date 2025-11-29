@@ -52,5 +52,6 @@ struct CompositeGuiConstants {
   uint2 fbSize;
   float4 *imageBuffer;
   uint *frameBuffer;
+  DescriptorHandle<SamplerState> sampler;
   DescriptorHandle<Texture2D<float4>> guiTexture;
 };

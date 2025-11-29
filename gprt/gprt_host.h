@@ -1629,12 +1629,8 @@ gprtGeomTypeSetIntersectionProg(GPRTGeomTypeOf<T> type, int rayType, GPRTModule 
 }
 
 /**
- * @brief Creates a sampler object for use in sampling textures. Behavior below
- * defines how texture.SampleLevel and texture.SampleGrad operate. The "sampled
- * footprint" mentioned below refers to the texture coordinate differentials
- * given to Texture.SampleGrad.
- *
- * @param context The GPRT context used to make the sampler.
+ * The "sampled footprint" mentioned below refers to the texture coordinate 
+ * differentials given to Texture.SampleGrad.
  * @param magFilter How to sample a texture when a texel's footprint covers more
  * than the sampled footprint. The default is GPRT_FILTER_LINEAR, which takes
  * the four closest texels and bilinearly interpolates among them.
@@ -1653,14 +1649,28 @@ gprtGeomTypeSetIntersectionProg(GPRTGeomTypeOf<T> type, int rayType, GPRTModule 
  * sampled beyond the normal interval.
  * @param borderColor If address mode is set to GPRT_ADDRESS_MODE_BORDER, this
  * sets the border color to use.
+ **/
+struct GPRTSamplerParams
+{
+  GPRTFilter magFilter GPRT_IF_CPP(= GPRT_FILTER_LINEAR);
+  GPRTFilter minFilter GPRT_IF_CPP(= GPRT_FILTER_LINEAR);
+  GPRTFilter mipFilter GPRT_IF_CPP(= GPRT_FILTER_LINEAR); 
+  uint32_t anisotropy GPRT_IF_CPP(= 1);
+  GPRTSamplerAddressMode addressMode GPRT_IF_CPP(= GPRT_SAMPLER_ADDRESS_MODE_REPEAT);
+  GPRTBorderColor borderColor GPRT_IF_CPP(= GPRT_BORDER_COLOR_OPAQUE_BLACK);
+};
+
+/**
+ * @brief Creates a sampler object for use in sampling textures. Samplers control
+ * how texture.SampleLevel and texture.SampleGrad operate. See GPRTSamplerParams
+ * for more details.  
+ *
+ * @param context The GPRT context used to make the sampler.
+ * @param GPRTSamplerParams The parameters of the sampler to create.
  * @return GPRTSampler The sampler object that was made.
  */
 GPRT_API GPRTSampler
-gprtSamplerCreate(GPRTContext context, GPRTFilter magFilter GPRT_IF_CPP(= GPRT_FILTER_LINEAR),
-                  GPRTFilter minFilter GPRT_IF_CPP(= GPRT_FILTER_LINEAR),
-                  GPRTFilter mipFilter GPRT_IF_CPP(= GPRT_FILTER_LINEAR), uint32_t anisotropy GPRT_IF_CPP(= 1),
-                  GPRTSamplerAddressMode addressMode GPRT_IF_CPP(= GPRT_SAMPLER_ADDRESS_MODE_REPEAT),
-                  GPRTBorderColor borderColor GPRT_IF_CPP(= GPRT_BORDER_COLOR_OPAQUE_BLACK));
+gprtSamplerCreate(GPRTContext context, GPRTSamplerParams params GPRT_IF_CPP(= GPRTSamplerParams{}));
 
 /**
  * @brief Returns the unique GPRT-managed index for the given sampler.
@@ -2209,6 +2219,9 @@ gprtBufferCopy(GPRTContext context, GPRTBufferOf<T> src, GPRTBufferOf<T> dst, ui
                  dstDeviceID);
 }
 
+/**
+ * @note This command runs on the graphics command queue.
+ */
 GPRT_API void gprtBufferTextureCopy(GPRTContext context, GPRTBuffer buffer, GPRTTexture texture, uint32_t bufferOffset,
                                     uint32_t bufferRowLength, uint32_t bufferImageHeight, uint32_t imageOffsetX,
                                     uint32_t imageOffsetY, uint32_t imageOffsetZ, uint32_t imageExtentX,

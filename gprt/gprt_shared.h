@@ -57,7 +57,7 @@
 // #define USE_SQUARED_DISTS
 
 // Minimum guaranteed PC size (might require RADV on AMD)
-#define PUSH_CONSTANTS_LIMIT 256
+#define PUSH_CONSTANTS_LIMIT 128
 
 // By limiting ourselves to the following, we can improve compatibility across
 // AMD, NVIDIA and Intel with compile time checks

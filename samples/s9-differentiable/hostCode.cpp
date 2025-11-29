@@ -150,6 +150,8 @@ main(int ac, char **av) {
 
   // create a context on the first device:
   gprtRequestWindow(fbSize.x, fbSize.y, "S9_0 Differentiable");
+  gprtRequestMaxPayloadSize(32);
+  gprtRequestMaxAttributeSize(8);
   GPRTContext context = gprtContextCreate();
   GPRTModule module = gprtModuleCreate(context, s9_0_deviceCode);
 
@@ -216,6 +218,8 @@ main(int ac, char **av) {
   GPRTTextureOf<uint32_t> guiColorAttachment = gprtDeviceTextureCreate<uint32_t>(context, srgbTexParams, nullptr);
   GPRTTextureOf<float> guiDepthAttachment = gprtDeviceTextureCreate<float>(context, d32TexParams, nullptr);
   gprtGuiSetRasterAttachments(context, guiColorAttachment, guiDepthAttachment);
+
+  GPRTSampler sampler = gprtSamplerCreate(context);
 
   // We begin by making one teapot mesh, storing that mesh in a bottom
   // level acceleration structure.
@@ -300,6 +304,7 @@ main(int ac, char **av) {
   guiPC.frameBuffer = gprtBufferGetDevicePointer(frameBuffer);
   guiPC.imageBuffer = gprtBufferGetDevicePointer(imageBuffer);
   guiPC.guiTexture = gprtTextureGet2DHandle<float4>(guiColorAttachment);
+  guiPC.sampler = gprtSamplerGetHandle(sampler);
 
   RTPushConstants rtPC;
 
@@ -371,6 +376,7 @@ main(int ac, char **av) {
     gprtComputeLaunch(ClearOBB, {1, 1, 1}, {1, 1, 1}, obbPC);
     gprtComputeLaunch(ComputeOBB, {divUp(obbPC.numTrisToInclude, 128), 1, 1}, {128, 1, 1}, obbPC);
     gprtComputeLaunch(BackPropOBB, {divUp(obbPC.numTrisToInclude, 128), 1, 1}, {128, 1, 1}, obbPC);
+    gprtComputeSynchronize(context);
 
     // Optimize using Adam
     gprtBufferMap(eulRots);

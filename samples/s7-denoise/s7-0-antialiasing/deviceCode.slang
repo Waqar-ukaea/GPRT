@@ -102,7 +102,6 @@ raygen(uniform RayGenData record) {
            payload                  // the payload IO
   );
 
-
   // ------------- previous-frame clip coordinates -------------
   float4 clipPrev = mul(float4(payload.posPrev, 1.0), record.prevViewProj);
   float  rcpWprev = rcp(clipPrev.w);

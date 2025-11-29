@@ -180,11 +180,11 @@ getNullAccelHandle() {
 //   return buffers[buffer.index];
 // }
 
-SamplerState
-getDefaultSampler() {
-  // We assume that there is a default sampler at address 0 here
-  return samplers[0];
-}
+// SamplerState
+// getDefaultSampler() {
+//   // We assume that there is a default sampler at address 0 here
+//   return samplers[0];
+// }
 
 // Todo: update below to support pointers
 
