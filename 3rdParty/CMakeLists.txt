@@ -81,7 +81,7 @@ ELSEIF(LINUX)
     execute_process(COMMAND ${WAYLAND_SCANNER} client-header ${protocol_dir}/stable/xdg-shell/xdg-shell.xml ${CMAKE_BINARY_DIR}/xdg-shell-client-protocol.h
         COMMAND ${WAYLAND_SCANNER} private-code ${protocol_dir}/stable/xdg-shell/xdg-shell.xml ${CMAKE_BINARY_DIR}/xdg-shell-protocol.c)
     include_directories(${CMAKE_BINARY_DIR})
-  ELSEIF(USE_HEADLESS)
+  ELSEIF(GPRT_HEADLESS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_USE_PLATFORM_HEADLESS_EXT")
   ELSE(USE_D2D_WSI)
     find_package(XCB REQUIRED)
@@ -143,79 +143,92 @@ add_subdirectory(stb_image)
 # Find Tiny Obj
 add_subdirectory(tinyobj)
 
-# Find GLFW
-# if(GPRT_BUILD_SAMPLES)
+# -----------------------------------------------------------------------------
+# Windowing / UI / DLSS stack (only for non-headless builds)
+# -----------------------------------------------------------------------------
+if (NOT GPRT_HEADLESS)
+
+  # Find GLFW + OpenGL
   if(NOT GPRT_USE_INCLUDED_GLFW)
     find_package(glfw3 QUIET)
   endif()
+
   set(OpenGL_GL_PREFERENCE "LEGACY")
-  #find_package(OpenGL QUIET)
   find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS OpenGL)
+
   if (NOT TARGET glfw)
     if (OpenGL_FOUND)
       message(STATUS "found opengl, building glfw")
       add_subdirectory(glfw)
     endif()
   endif()
-# endif()
 
-# Find Imgui
-add_library(imgui
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
+  # ImGui / ImPlot / ImGuizmo etc
+  add_library(imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_tables.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_tables.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/GraphEditor.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/GraphEditor.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/GraphEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/GraphEditor.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImCurveEdit.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImCurveEdit.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImCurveEdit.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImCurveEdit.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGradient.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGradient.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGradient.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGradient.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGuizmo.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGuizmo.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGuizmo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImGuizmo.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImSequencer.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImSequencer.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImSequencer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImSequencer.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImZoomSlider.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo/ImZoomSlider.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_vulkan.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_glfw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_vulkan.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/imgui_impl_glfw.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/misc/cpp/imgui_stdlib.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/misc/cpp/imgui_stdlib.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/misc/cpp/imgui_stdlib.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/misc/cpp/imgui_stdlib.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/implot/implot_items.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/implot/implot.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/implot/implot.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/implot/implot_items.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/implot/implot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/implot/implot.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/GPRT-SampleAssets/OpenFontIcons.h
-)
+    ${CMAKE_CURRENT_SOURCE_DIR}/GPRT-SampleAssets/OpenFontIcons.h
+  )
 
-target_include_directories(imgui PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui
-  ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends
-  ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo
-  ${CMAKE_CURRENT_SOURCE_DIR}/implot
-  ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/GPRT-SampleAssets/
-  ${Vulkan_INCLUDE_DIR}
-)
+  target_include_directories(imgui PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends
+    ${CMAKE_CURRENT_SOURCE_DIR}/imguizmo
+    ${CMAKE_CURRENT_SOURCE_DIR}/implot
+    ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/GPRT-SampleAssets/
+    ${Vulkan_INCLUDE_DIR}
+  )
 
-target_link_libraries(${VULKAN_LIBRARY} glfw)
+  # This line in the original file was very odd:
+  #   target_link_libraries(${VULKAN_LIBRARY} glfw)
+  # It makes much more sense to link glfw to *imgui* instead:
+  target_link_libraries(imgui PUBLIC glfw ${Vulkan_LIBRARY})
 
-# Find mesh generator
-if (GPRT_BUILD_SAMPLES)
-add_subdirectory(generator)
+  # Mesh generator is only used by samples
+  if (GPRT_BUILD_SAMPLES)
+    add_subdirectory(generator)
+  endif()
+
+
+
+else()
+  message(STATUS "GPRT_HEADLESS=ON: skipping OpenGL/GLFW/imgui/DLSS/generator")
 endif()
 
-# Find DLSS interface
+# DLSS interface (only needed for fancy rendering)
 add_subdirectory(dlss)

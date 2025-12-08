@@ -54,21 +54,33 @@
 #endif
 #endif
 
-// library for windowing
-#include <GLFW/glfw3.h>
 
-// For SPIRV reflection
-#include "spirv_reflect.h"
+// Forward declare GLFWwindow so we can keep pointer members in the Context
+// even when building headless, without needing the GLFW headers.
+struct GLFWwindow;
+
+#ifdef GPRT_HEADLESS
+#   include <GLFW/glfw3.h>
+
+#   include "imgui.h"
+#   include "imgui_impl_vulkan.h"
+#   include "imgui_impl_glfw.h"
+#   include "implot.h"
+#   include "OpenFontIcons.h"
 
 // library for image output
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
 
-// For user interface
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_vulkan.h"
+#endif
+
+// For SPIRV reflection
+#include "spirv_reflect.h"
+
+
+
+
 
 #define VENDOR_ID_AMD 0x1002
 #define VENDOR_ID_ImgTec 0x1010
@@ -4783,7 +4795,7 @@ Context::destroy() {
     vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
     descriptorPool = nullptr;
   }
-
+#ifdef GPRT_HEADLESS
   if (imguiPool) {
     vkDestroyDescriptorPool(logicalDevice, imguiPool, nullptr);
     imguiPool = nullptr;
@@ -4797,7 +4809,7 @@ Context::destroy() {
     vkDestroyFramebuffer(logicalDevice, imgui.frameBuffer, nullptr);
     imgui.frameBuffer = nullptr;
   }
-
+#endif
   if (imageAvailableSemaphore) {
     vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
     imageAvailableSemaphore = nullptr;
@@ -4812,11 +4824,13 @@ Context::destroy() {
     vkDestroySwapchainKHR(logicalDevice, swapchain, nullptr);
     swapchain = nullptr;
   }
+#ifdef GPRT_HEADLESS
   if (window) {
     glfwDestroyWindow(window);
     glfwTerminate();
     window = nullptr;
   }
+#endif
   if (surface) {
     vkDestroySurfaceKHR(instance, surface, nullptr);
     surface = nullptr;
@@ -5025,6 +5039,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
   uint32_t glfwExtensionCount = 0;
   const char **glfwExtensions;
   if (requestedFeatures.window) {
+#ifdef GPRT_HEADLESS
     if (!glfwInit()) {
       LOG_WARNING("Unable to create window. Falling back to headless mode.");
       requestedFeatures.window = false;
@@ -5037,6 +5052,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
         instanceExtensions.push_back(glfwExtensions[i]);
       }
     }
+#endif
   }
 
 #if defined(VK_USE_PLATFORM_MACOS_MVK) && (VK_HEADER_VERSION >= 216)
@@ -5077,6 +5093,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
   }
 
   /// 1.5 - create a window and surface if requested
+#ifdef GPRT_HEADLESS
   if (requestedFeatures.window) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // todo, allow the window to resize and recreate swapchain
@@ -5096,6 +5113,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     // Poll some initial event values
     glfwPollEvents();
   }
+#endif
 
   // Setup debug printf callback
   if (requestedFeatures.debugPrintf) {
@@ -5814,7 +5832,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
       LOG_ERROR("Failed to create swapchain semaphores");
     }
   }
-
+#if GPRT_HEADLESS
   // Swapchain setup
   if (requestedFeatures.window) {
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -5929,6 +5947,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     vkAcquireNextImageKHR(logicalDevice, swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE,
                           &currentImageIndex);
   }
+#endif
 
   // Allocate resource heap
   {
@@ -6012,6 +6031,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     VK_CHECK_RESULT(vkAllocateDescriptorSets(logicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
   }
 
+#ifdef GPRT_HEADLESS
   // Init imgui
   if (requestedFeatures.window) {
     // 1: create descriptor pool for IMGUI
@@ -6045,6 +6065,7 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     // this initializes imgui for SDL
     ImGui_ImplGlfw_InitForVulkan(window, true);
   }
+#endif
 
   // Init denoisers
   if (requestedFeatures.aiDenoiser.requested) {
@@ -6891,6 +6912,7 @@ Context::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old
 // For ImGui
 void
 Context::setRasterAttachments(Texture *colorTexture, Texture *depthTexture) {
+#ifdef GPRT_HEADLESS
   if (colorTexture->width != depthTexture->width || colorTexture->height != depthTexture->height) {
     throw std::runtime_error("Error, color and depth attachment textures must have equal dimensions!");
   } else {
@@ -6997,10 +7019,13 @@ Context::setRasterAttachments(Texture *colorTexture, Texture *depthTexture) {
   ImGui_ImplVulkan_NewFrame(); // Needed to allocate fonts on first frame.
 
   synchronizeGraphics();
+#endif
+  return;
 }
 
 uint64_t
 Context::rasterizeGui() {
+#ifdef GPRT_HEADLESS
   ImGui::Render();
   ImDrawData *draw_data = ImGui::GetDrawData();
 
@@ -7046,6 +7071,8 @@ Context::rasterizeGui() {
 
   endGraphicsCommands(commandBuffer);
   return GRTimelineCounter;
+#endif
+  return 0;
 }
 
 GPRT_API void
@@ -7118,6 +7145,7 @@ gprtRequestRecordSizes(uint32_t raygenRecordSize, uint32_t hitRecordSize, uint32
 
 GPRT_API bool
 gprtWindowShouldClose(GPRTContext _context) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
@@ -7132,16 +7160,20 @@ gprtWindowShouldClose(GPRTContext _context) {
   }
 
   return glfwWindowShouldClose(context->window);
+#endif
+  return true;
 }
 
 GPRT_API void
 gprtSetWindowTitle(GPRTContext _context, const char *title) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
     return;
 
   glfwSetWindowTitle(context->window, title);
+#endif
 }
 
 // GPRT_API void
@@ -7166,51 +7198,64 @@ gprtSetWindowTitle(GPRTContext _context, const char *title) {
 
 GPRT_API void
 gprtGetCursorPos(GPRTContext _context, double *xpos, double *ypos) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
     return;
 
   glfwGetCursorPos(context->window, xpos, ypos);
+#endif
 }
 
 GPRT_API void
 gprtGrabAndHideCursor(GPRTContext _context, bool enabled) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
     return;
 
   glfwSetInputMode(context->window, GLFW_CURSOR, enabled ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+#endif
 }
 
 GPRT_API int
 gprtGetMouseButton(GPRTContext _context, int button) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
     return GPRT_RELEASE;
 
   return glfwGetMouseButton(context->window, button);
+#endif
+  return 1;
 }
 
 GPRT_API int
 gprtGetKey(GPRTContext _context, int key) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
     return GPRT_RELEASE;
 
   return glfwGetKey(context->window, key);
+#endif
+  return 1;
 }
 
 GPRT_API double
 gprtGetTime(GPRTContext _context) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Context *context = (Context *) _context;
   if (!requestedFeatures.window)
     return 0.0;
   return glfwGetTime();
+#endif
+  return 0.0;
 }
 
 GPRT_API void gprtGetDenoiserInputSize(GPRTContext _context, uint32_t *width, uint32_t *height)
@@ -9088,6 +9133,7 @@ gprtBufferGetDeviceAddress(GPRTBuffer _buffer, int deviceID) {
 
 GPRT_API void
 gprtBufferSaveImage(GPRTBuffer _buffer, uint32_t width, uint32_t height, const char *imageName) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Buffer *buffer = (Buffer *) _buffer;
 
@@ -9114,10 +9160,12 @@ gprtBufferSaveImage(GPRTBuffer _buffer, uint32_t width, uint32_t height, const c
   // Return mapped to previous state
   if (!mapped)
     buffer->unmap();
+#endif
 }
 
 GPRT_API void
 gprtTextureSaveImage(GPRTTexture _texture, const char *imageName) {
+#ifdef GPRT_HEADLESS
   LOG_API_CALL();
   Texture *texture = (Texture *) _texture;
 
@@ -9146,6 +9194,7 @@ gprtTextureSaveImage(GPRTTexture _texture, const char *imageName) {
   // Return mapped to previous state
   if (!mapped)
     texture->unmap();
+#endif
 }
 
 GPRT_API GPRTAccel

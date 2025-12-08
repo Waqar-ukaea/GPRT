@@ -90,20 +90,26 @@ set_target_properties(gprt
 #     )
 # ENDIF(WIN32)
 
+# Always needed for core GPRT
 target_link_libraries(gprt
     PUBLIC
     ${Vulkan_LIBRARY}
     fallbacksDeviceCode
     sortDeviceCode
-    # scanDeviceCode
-    glfw
-    stb_image
     vma
-    imgui
-    dlss
     Threads::Threads
-    ${OPENGL_gl_LIBRARY}
-)
+    dlss
+    )
+
+if (NOT GPRT_HEADLESS)
+  target_link_libraries(gprt
+      PUBLIC
+      glfw
+      stb_image
+      imgui
+      ${OPENGL_gl_LIBRARY}
+  )
+endif()
 
 set_target_properties(gprt PROPERTIES LINKER_LANGUAGE CXX)
 

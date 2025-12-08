@@ -55,7 +55,8 @@ endif()
 # Configuration Options
 # ------------------------------------------------------------------
 option(GPRT_BUILD_SHARED "Build GPRT as a shared library? (otherwise static)" OFF)
-option(GPRT_USE_INCLUDED_GLFW "Build GPRT including the submoduled GLFW? (otherwise, system GLFW will be found)" ON)  
+option(GPRT_USE_INCLUDED_GLFW "Build GPRT including the submoduled GLFW? (otherwise, system GLFW will be found)" ON) 
+option(GPRT_HEADLESS "Build GPRT without any windowing / OpenGL / GLFW / imgui / DLSS" OFF)
 
 # ------------------------------------------------------------------
 # External configuration variables
