@@ -170,6 +170,7 @@ static struct RequestedFeatures {
   bool motionBlur = false;
 
   bool debugPrintf = true;
+  bool debugUtilsEnabled = true;
 
   // An abstraction over DLSS RR, FSR4, etc
   struct AIDenoiserProperties {
@@ -439,6 +440,13 @@ PFN_vkCmdWriteAccelerationStructuresPropertiesKHR vkCmdWriteAccelerationStructur
 
 PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT;
 PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
+PFN_vkCmdBeginDebugUtilsLabelEXT  vkCmdBeginDebugUtilsLabelEXT = nullptr;
+PFN_vkCmdEndDebugUtilsLabelEXT    vkCmdEndDebugUtilsLabelEXT   = nullptr;
+PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabelEXT = nullptr;
+
+// Optional but highly recommended for naming objects:
+PFN_vkSetDebugUtilsObjectNameEXT  vkSetDebugUtilsObjectNameEXT = nullptr;
+
 VkDebugUtilsMessengerEXT debugUtilsMessenger;
 VkDebugUtilsMessengerEXT validationMessenger;
 
@@ -463,6 +471,9 @@ struct Stage {
 struct Context {
   // For convenience, an opaque handle to the context
   GPRTContext context = (GPRTContext) this;
+
+  // submit counter
+  std::atomic<uint64_t> g_submit{0};
 
   VkApplicationInfo appInfo;
 
@@ -5092,6 +5103,28 @@ Context::Context(int32_t *requestedDeviceIDs, int numRequestedDevices) {
     LOG_ERROR("failed to create instance! : \n" + errorString(err));
   }
 
+  if (requestedFeatures.debugUtilsEnabled) {
+  gprt::vkCmdBeginDebugUtilsLabelEXT =
+    reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
+      vkGetInstanceProcAddr(instance, "vkCmdBeginDebugUtilsLabelEXT"));
+
+  gprt::vkCmdEndDebugUtilsLabelEXT =
+    reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
+      vkGetInstanceProcAddr(instance, "vkCmdEndDebugUtilsLabelEXT"));
+
+  gprt::vkCmdInsertDebugUtilsLabelEXT =
+    reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(
+      vkGetInstanceProcAddr(instance, "vkCmdInsertDebugUtilsLabelEXT"));
+
+  gprt::vkSetDebugUtilsObjectNameEXT =
+    reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+      vkGetInstanceProcAddr(instance, "vkSetDebugUtilsObjectNameEXT"));
+
+  if (!gprt::vkCmdBeginDebugUtilsLabelEXT || !gprt::vkCmdEndDebugUtilsLabelEXT) {
+    LOG_WARNING("VK_EXT_debug_utils enabled but label entry points not found (profiling labels will be disabled).");
+  }
+}
+
   /// 1.5 - create a window and surface if requested
 #ifdef GPRT_HEADLESS
   if (requestedFeatures.window) {
@@ -6686,6 +6719,7 @@ VkResult Context::endGraphicsCommands(VkCommandBuffer commandBuffer) {
   submitInfo.pNext = &timelineInfo;
 
   VkResult err = vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  g_submit++;
   if (err) LOG_ERROR("failed to submit graphics queue! : \n" + errorString(err));
   return err;
 }
@@ -6743,6 +6777,7 @@ VkResult Context::endComputeCommands(VkCommandBuffer commandBuffer) {
   submitInfo.pNext = &timelineInfo;
 
   err = vkQueueSubmit(computeQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  g_submit++;
   if (err) LOG_ERROR("failed to submit compute queue! : \n" + errorString(err));
   return err;
 }
@@ -6799,6 +6834,7 @@ VkResult Context::endTransferCommands(VkCommandBuffer commandBuffer) {
   submitInfo.pNext = &timelineInfo;
 
   VkResult err = vkQueueSubmit(transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  g_submit++;
   if (err) LOG_ERROR("failed to submit transfer queue! : \n" + errorString(err));
   return err;
 }
@@ -9358,6 +9394,15 @@ gprtRayGenLaunch3D(GPRTContext _context, GPRTRayGen _rayGen, uint32_t dims_x, ui
 
   VkCommandBuffer commandBuffer = context->beginGraphicsCommands();
 
+const bool hasLabels = (gprt::vkCmdBeginDebugUtilsLabelEXT && gprt::vkCmdEndDebugUtilsLabelEXT);
+
+
+if (hasLabels) {
+  VkDebugUtilsLabelEXT lbl{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+  lbl.pLabelName = "GPRT RayGenLaunch3D";
+  gprt::vkCmdBeginDebugUtilsLabelEXT(commandBuffer, &lbl);
+}
+
   std::vector<VkDescriptorSet> descriptorSets = {context->descriptorSet};
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
                           context->raytracingPipelineLayout, 0, (uint32_t) descriptorSets.size(), descriptorSets.data(),
@@ -9450,12 +9495,32 @@ gprtRayGenLaunch3D(GPRTContext _context, GPRTRayGen _rayGen, uint32_t dims_x, ui
     hitShaderSbtEntry.size = hitShaderSbtEntry.stride * numHitRecords;
   }
 
+if (hasLabels) {
+  VkDebugUtilsLabelEXT lbl{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+  lbl.pLabelName = "vkCmdTraceRaysKHR";
+  gprt::vkCmdBeginDebugUtilsLabelEXT(commandBuffer, &lbl);
+}
+
+  // Print number of VK Queue submits before trace rays
+  auto submits = context->g_submit.load(std::memory_order_relaxed);
+  printf("NUMBER OF VKQUEUE SUBMITS BEFORE TRACERAY = %llu\n",
+        (unsigned long long)submits);
+
+  // Issue the trace rays command
   gprt::vkCmdTraceRays(commandBuffer, &raygenShaderSbtEntry, &missShaderSbtEntry, &hitShaderSbtEntry,
                        &callableShaderSbtEntry, dims_x, dims_y, dims_z);
+
+if (hasLabels) {
+  gprt::vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+}   
 
   if (context->queryRequested) {
     vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, context->queryPool, 1);
   }
+
+if (hasLabels) {
+  gprt::vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+}
 
   context->endGraphicsCommands(commandBuffer);
   return context->GRTimelineCounter;
